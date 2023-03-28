@@ -2,6 +2,7 @@ from yandex_music import ClientAsync
 
 
 def authorize():
+    """Авторизация в клиенте"""
     with open('token2.txt', 'r') as tokenfile:
         token = tokenfile.read().strip()
     client = ClientAsync(token)
@@ -19,10 +20,11 @@ async def search(search_string: str, type_: str = 'all'):
 
 
 async def process_search(result):
+    """Обрабатывает результат запроса поиска треков и приводит их в понятный пользователю вид"""
     first_10_songs = result['tracks']['results'][:10]
     answer = ''
     for i in range(len(first_10_songs)):
-        answer += f'{i+1}: {(await get_name_with_id(first_10_songs[i]))}\n'
+        answer += f'{i+1}: {(await get_track_name(first_10_songs[i]))}\n'
     return answer
 
 
@@ -31,11 +33,13 @@ async def get_name_for_file(object):  # works
     return object['title'] + ' - ' + ', '.join(x['name'] for x in object['artists']) + '.mp3'
 
 
-async def get_name_with_id(object):
+async def get_track_name(object):
+    """Возвращает имя трека в виде, понятном пользователю"""
     return f"{object['title']} - {', '.join(x['name'] for x in object['artists'])}"
 
 
 async def get_playlist_name(object):
+    """Возвращает имя плейлиста в виде, понятном пользователю"""
     return f"{object['title']} - {object['owner']['login']} (найдено {object['track_count']} треков)"
 
 
@@ -45,11 +49,13 @@ async def download(object, folder):  # works
 
 
 async def get_user_playlists(user_id: str):
+    """Возвращает обьект результата поиска плейлистов по id пользователя"""
     res = await client.users_playlists_list(user_id=user_id)
     return res
 
 
 async def process_user_playlist_search(result):
+    """Обрабатывает результаты поиска плейлистов и приводит их в понятный пользователю вид"""
     playlists = result  #['playlists']['results']
     ans = ''
     for i in range(len(playlists)):
@@ -58,7 +64,7 @@ async def process_user_playlist_search(result):
 
 
 
-async def download_playlist(playlist):  # works
-    for track in playlist.fetch_tracks_async():
-        full_track = await track.fetch_track_async()
-        await download(full_track)
+# async def download_playlist(playlist):  # works
+#     for track in playlist.fetch_tracks_async():
+#         full_track = await track.fetch_track_async()
+#         await download(full_track)

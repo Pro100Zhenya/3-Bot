@@ -24,85 +24,82 @@ logger = logging.getLogger(__name__)
 # Напишем соответствующие функции.
 # Их сигнатура и поведение аналогичны обработчикам текстовых сообщений.
 
-async def start(update, context):
-    """Отправляет сообщение когда получена команда /start"""
-    user = update.effective_user
-    await update.message.reply_html(
-        rf"Привет {user.mention_html()}! Я поисковая машина. Напишите мне что-нибудь, и я все сделаю, хозяин!",
-    )
+# async def start(update, context):
+#     """Отправляет сообщение когда получена команда /start"""
+#     user = update.effective_user
+#     await update.message.reply_html(
+#         rf"Привет {user.mention_html()}! Я поисковая машина. Напишите мне что-нибудь, и я все сделаю, хозяин!",
+#     )
+#
+#
+# async def help_command(update, context):
+#     """Отправляет сообщение когда получена команда /help"""
+#     await update.message.reply_text("Этот умеет искать, сранивать и сохранять товары) А кирилл лох")
+#
+#
+# async def favourites_command(update, context):
+#     """Отправляет сообщение когда получена команда /help"""
+#     await update.message.reply_text("Ничерта")
+#
+#
+# async def search_command(update, context):
+#     """Отправляет сообщение когда получена команда /help"""
+#     static_api_request = f"https://yandex.ru/images/search?pos=0&text=%D0%BA%D0%B0%D1%80%D1%82%D0%B8%D0%BD%D0%BA%D0%B0%20%D0%BD%D0%BE%D0%B6%D0%B0%20%D0%B4%D0%BB%D1%8F%20%D0%B8%D0%B3%D1%80&img_url=http%3A%2F%2Fw7.pngwing.com%2Fpngs%2F518%2F558%2Fpng-transparent-hunting-survival-knives-bowie-knife-utility-knives-weapon-knife-angle-arm-weapon.png&source=serp&rpt=simage&lr=53"
+#     medias = [InputMediaPhoto(static_api_request),
+#               InputMediaPhoto(static_api_request)]
+#     await context.bot.send_media_group(
+#         update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
+#         # Ссылка на static API, по сути, ссылка на картинку.
+#         # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
+#         medias, caption='''Нож питерский\nfgfgfg\nfgfgf😘'''
+#     )
+#     await update.message.reply_photo('knife_6_01153805.jpg', caption='''Нож питерский\nfgfgfg\nfgfgf😘''')
+#     await update.message.reply_text('knife_6_01153805.jpg')
+#
+#
+# async def photo_command(update, context):
+#     pass
+#
+#
+# async def echo(update, context):
+#     if (update.message.text).split()[0]=='Поиск:':
+#         static_api_request = (update.message.text).split()[1]
+#         medias = [InputMediaPhoto(static_api_request),
+#                   InputMediaPhoto(static_api_request)]
+#         await context.bot.send_media_group(
+#             update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
+#             # Ссылка на static API, по сути, ссылка на картинку.
+#             # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
+#             medias, caption='''...
+# Первый товар
+# Цена: 250р
+# Отзывы: ⭐⭐⭐⭐
+# Ссылка для покупки: url.fgsjjhd
+# ...
+# Второй товар
+# Цена: 250р
+# Отзывы: ⭐⭐⭐⭐
+# Ссылка для покупки: url.fgsjjhd
+# ...
+# Третий товар
+# Цена: 250р
+# Отзывы: ⭐⭐⭐⭐
+# Ссылка для покупки: url.fgsjjhd
+# ...'''
+#         )
+#     else:
+#         await update.message.reply_text(update.message.text)
 
 
-async def help_command(update, context):
-    """Отправляет сообщение когда получена команда /help"""
-    await update.message.reply_text("Этот умеет искать, сранивать и сохранять товары) А кирилл лох")
-
-
-async def favourites_command(update, context):
-    """Отправляет сообщение когда получена команда /help"""
-    await update.message.reply_text("Ничерта")
-
-
-async def search_command(update, context):
-    """Отправляет сообщение когда получена команда /help"""
-    static_api_request = f"https://yandex.ru/images/search?pos=0&text=%D0%BA%D0%B0%D1%80%D1%82%D0%B8%D0%BD%D0%BA%D0%B0%20%D0%BD%D0%BE%D0%B6%D0%B0%20%D0%B4%D0%BB%D1%8F%20%D0%B8%D0%B3%D1%80&img_url=http%3A%2F%2Fw7.pngwing.com%2Fpngs%2F518%2F558%2Fpng-transparent-hunting-survival-knives-bowie-knife-utility-knives-weapon-knife-angle-arm-weapon.png&source=serp&rpt=simage&lr=53"
-    medias = [InputMediaPhoto(static_api_request),
-              InputMediaPhoto(static_api_request)]
-    await context.bot.send_media_group(
-        update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
-        # Ссылка на static API, по сути, ссылка на картинку.
-        # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
-        medias, caption='''Нож питерский\nfgfgfg\nfgfgf😘'''
-    )
-    await update.message.reply_photo('knife_6_01153805.jpg', caption='''Нож питерский\nfgfgfg\nfgfgf😘''')
-    await update.message.reply_text('knife_6_01153805.jpg')
-
-
-async def photo_command(update, context):
-    pass
-
-
-async def echo(update, context):
-    if (update.message.text).split()[0]=='Поиск:':
-        static_api_request = (update.message.text).split()[1]
-        medias = [InputMediaPhoto(static_api_request),
-                  InputMediaPhoto(static_api_request)]
-        await context.bot.send_media_group(
-            update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
-            # Ссылка на static API, по сути, ссылка на картинку.
-            # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
-            medias, caption='''...
-Первый товар
-Цена: 250р
-Отзывы: ⭐⭐⭐⭐
-Ссылка для покупки: url.fgsjjhd
-...
-Второй товар
-Цена: 250р
-Отзывы: ⭐⭐⭐⭐
-Ссылка для покупки: url.fgsjjhd
-...
-Третий товар
-Цена: 250р
-Отзывы: ⭐⭐⭐⭐
-Ссылка для покупки: url.fgsjjhd
-...'''
-        )
-    else:
-        await update.message.reply_text(update.message.text)
-
-
-async def search_track(update, context):
-    search_string = update.message.text[13:].strip()  # 12 - длина команды
-    search_result = await music_functions_async.search(search_string)
-    answer = await music_functions_async.process_search(search_result)
-    await update.message.reply_text(answer)
-
-
-async def search_playlist(update, context):
-    pass
+# async def search_track(update, context):
+#     search_string = update.message.text[13:].strip()  # 12 - длина команды
+#     search_result = await music_functions_async.search(search_string)
+#     answer = await music_functions_async.process_search(search_result)
+#     await update.message.reply_text(answer)
 
 
 async def search_users_playlists(update, context):
+    """Обработчик первой стадии диалога поиска плейлистов, выполняет поиск по id"""
     user_id = update.message.text[len('search_user_playlists') + 2:]
     # print(user_id)
     res = await music_functions_async.get_user_playlists(user_id)
@@ -117,6 +114,7 @@ async def search_users_playlists(update, context):
 
 
 async def ask_for_playlist_download(update, context):
+    """Обработчик второй стадии диалога поиска плейлистов, получение номера требуемого плейлиста"""
     try:
         num = int(update.message.text)
         # print(num, 'введено')
@@ -134,6 +132,7 @@ async def ask_for_playlist_download(update, context):
 
 
 async def download_playlist(update, context):
+    """Обработчик третьей стадии диалога поиска плейлистов, скачивание плейлиста"""
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Скачивание отменено')
         return ConversationHandler.END
@@ -159,6 +158,7 @@ async def download_playlist(update, context):
 
 
 async def search_track_start(update, context):
+    """Обработчик первой стадии диалога поиска треков, выполняет поиск"""
     search_string = update.message.text[13:].strip()  # 12 - длина команды
     search_result = await music_functions_async.search(search_string)
     answer = await music_functions_async.process_search(search_result)
@@ -169,6 +169,7 @@ async def search_track_start(update, context):
 
 
 async def ask_for_track_download(update, context):
+    """Обработчик второй стадии поиска треков, отвечает за получение номера скачиваемого трека"""
     try:
         num = int(update.message.text)
         # print(num, 'введено')
@@ -179,20 +180,21 @@ async def ask_for_track_download(update, context):
         await update.message.reply_text('Введен слишком большой номер, попробуйте снова')
         return 1
     await update.message.reply_text(f'Вы точно хотите скачать трек\n '
-                                    f'{await music_functions_async.get_name_with_id(context.chat_data["result"][num - 1])}?\n'
+                                    f'{await music_functions_async.get_track_name(context.chat_data["result"][num - 1])}?\n'
                                     f'Введите да, если хотите скачать трек, и любой другой ответ в ином случае')
     context.chat_data['num'] = num
     return 2
 
 
 async def download_track(update, context):
+    """Обработчик третьей стадии диалога поиска треков, скачивание трека"""
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Скачивание отменено')
         return ConversationHandler.END
     await update.message.reply_text('Скачиваем...')
     full_track = context.chat_data['result'][context.chat_data['num'] - 1]
     await music_functions_async.download(full_track, folder='downloads/')
-    await update.message.reply_text(f'{await music_functions_async.get_name_with_id(full_track)} отправляется...')
+    await update.message.reply_text(f'{await music_functions_async.get_track_name(full_track)} отправляется...')
     file_sent = False
     while not file_sent:
         try:
@@ -208,6 +210,7 @@ async def download_track(update, context):
 
 
 async def stop(update, context):
+    """Обработчик выхода из диалога"""
     await update.message.reply_text("Всего доброго!")
     return ConversationHandler.END
 
@@ -217,21 +220,14 @@ def main():
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # Создаём обработчик сообщений типа filters.TEXT
-    # из описанной выше асинхронной функции echo()
-    # После регистрации обработчика в приложении
-    # эта асинхронная функция будет вызываться при получении сообщения
-    # с типом "текст", т. е. текстовых сообщений.
-    text_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, echo)
+    # text_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, echo)
 
     # Регистрируем обработчик в приложении.
     # application.add_handler(text_handler)
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("favourites", favourites_command))
-    application.add_handler(CommandHandler("search", search_command))
-
-    # application.add_handler(CommandHandler('search_track', search_track))
+    # application.add_handler(CommandHandler("start", start))
+    # application.add_handler(CommandHandler("help", help_command))
+    # application.add_handler(CommandHandler("favourites", favourites_command))
+    # application.add_handler(CommandHandler("search", search_command))
 
 
     playlist_search_conv_handler = ConversationHandler(
