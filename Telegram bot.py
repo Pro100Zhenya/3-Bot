@@ -145,6 +145,14 @@ async def stop(update, context):
     return ConversationHandler.END
 
 
+async def help_info(update, context):
+    await update.message.reply_text("""Как использовать данного бота:
+    /help - подсказки по командам
+    /search_user_playlists <логин пользователя> - начать диалог поиска плейлистов
+    пользователя с возможностью их скачивания
+    /search_track <запрос> - начать диалог поиска трека с возможностью скачивания трека""")
+
+
 def main():
     # Создаём объект Application.
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
@@ -174,6 +182,7 @@ def main():
         fallbacks=[CommandHandler('stop', stop)]
     )
     application.add_handler(track_search_conv_handler)
+    application.add_handler(CommandHandler('help', help_info))
     # Запускаем приложение.
     application.run_polling()
 

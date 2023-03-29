@@ -23,6 +23,8 @@ async def process_search(result):
     """Обрабатывает результат запроса поиска треков и приводит их в понятный пользователю вид"""
     first_10_songs = result['tracks']['results'][:10]
     answer = ''
+    if len(first_10_songs) == 0:
+        return 'Ничего не найдено'
     for i in range(len(first_10_songs)):
         answer += f'{i+1}: {(await get_track_name(first_10_songs[i]))}\n'
     return answer
@@ -58,6 +60,8 @@ async def process_user_playlist_search(result):
     """Обрабатывает результаты поиска плейлистов и приводит их в понятный пользователю вид"""
     playlists = result  #['playlists']['results']
     ans = ''
+    if len(playlists) == 0:
+        return 'Ничего не найдено'
     for i in range(len(playlists)):
         ans += f'{i + 1}: {await get_playlist_name(playlists[i])}\n'
     return ans
