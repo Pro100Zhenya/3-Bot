@@ -1,4 +1,5 @@
 # Импортируем необходимые классы.
+import asyncio.exceptions
 import logging
 import os
 
@@ -17,85 +18,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-# Определяем функцию-обработчик сообщений.
-# У неё два параметра, updater, принявший сообщение и контекст - дополнительная информация о сообщении.
-
-# Напишем соответствующие функции.
-# Их сигнатура и поведение аналогичны обработчикам текстовых сообщений.
-
-# async def start(update, context):
-#     """Отправляет сообщение когда получена команда /start"""
-#     user = update.effective_user
-#     await update.message.reply_html(
-#         rf"Привет {user.mention_html()}! Я поисковая машина. Напишите мне что-нибудь, и я все сделаю, хозяин!",
-#     )
-#
-#
-# async def help_command(update, context):
-#     """Отправляет сообщение когда получена команда /help"""
-#     await update.message.reply_text("Этот умеет искать, сранивать и сохранять товары) А кирилл лох")
-#
-#
-# async def favourites_command(update, context):
-#     """Отправляет сообщение когда получена команда /help"""
-#     await update.message.reply_text("Ничерта")
-#
-#
-# async def search_command(update, context):
-#     """Отправляет сообщение когда получена команда /help"""
-#     static_api_request = f"https://yandex.ru/images/search?pos=0&text=%D0%BA%D0%B0%D1%80%D1%82%D0%B8%D0%BD%D0%BA%D0%B0%20%D0%BD%D0%BE%D0%B6%D0%B0%20%D0%B4%D0%BB%D1%8F%20%D0%B8%D0%B3%D1%80&img_url=http%3A%2F%2Fw7.pngwing.com%2Fpngs%2F518%2F558%2Fpng-transparent-hunting-survival-knives-bowie-knife-utility-knives-weapon-knife-angle-arm-weapon.png&source=serp&rpt=simage&lr=53"
-#     medias = [InputMediaPhoto(static_api_request),
-#               InputMediaPhoto(static_api_request)]
-#     await context.bot.send_media_group(
-#         update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
-#         # Ссылка на static API, по сути, ссылка на картинку.
-#         # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
-#         medias, caption='''Нож питерский\nfgfgfg\nfgfgf😘'''
-#     )
-#     await update.message.reply_photo('knife_6_01153805.jpg', caption='''Нож питерский\nfgfgfg\nfgfgf😘''')
-#     await update.message.reply_text('knife_6_01153805.jpg')
-#
-#
-# async def photo_command(update, context):
-#     pass
-#
-#
-# async def echo(update, context):
-#     if (update.message.text).split()[0]=='Поиск:':
-#         static_api_request = (update.message.text).split()[1]
-#         medias = [InputMediaPhoto(static_api_request),
-#                   InputMediaPhoto(static_api_request)]
-#         await context.bot.send_media_group(
-#             update.message.chat_id,  # Идентификатор чата. Куда посылать картинку.
-#             # Ссылка на static API, по сути, ссылка на картинку.
-#             # Телеграму можно передать прямо её![](knife_6_01153805.jpg), не скачивая предварительно карту.
-#             medias, caption='''...
-# Первый товар
-# Цена: 250р
-# Отзывы: ⭐⭐⭐⭐
-# Ссылка для покупки: url.fgsjjhd
-# ...
-# Второй товар
-# Цена: 250р
-# Отзывы: ⭐⭐⭐⭐
-# Ссылка для покупки: url.fgsjjhd
-# ...
-# Третий товар
-# Цена: 250р
-# Отзывы: ⭐⭐⭐⭐
-# Ссылка для покупки: url.fgsjjhd
-# ...'''
-#         )
-#     else:
-#         await update.message.reply_text(update.message.text)
-
-
-# async def search_track(update, context):
-#     search_string = update.message.text[13:].strip()  # 12 - длина команды
-#     search_result = await music_functions_async.search(search_string)
-#     answer = await music_functions_async.process_search(search_result)
-#     await update.message.reply_text(answer)
 
 
 async def search_users_playlists(update, context):
@@ -138,21 +60,29 @@ async def download_playlist(update, context):
         return ConversationHandler.END
     await update.message.reply_text('Скачиваем...')
     playlist = context.chat_data['result'][context.chat_data['num'] - 1]
-    # for track in await playlist.fetch_tracks_async():
-    for track in (await music_functions_async.client.users_playlists(playlist.kind, playlist.owner.uid)).tracks:
-        full_track = await track.fetch_track_async()
-        await music_functions_async.download(full_track, folder='downloads/')
-        await update.message.reply_text(f'{full_track["title"]} отправляется...')
-        file_sent = False
-        while not file_sent:
-            try:
-                await context.bot.send_document(
-                    document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}', 'rb'), chat_id=update.message.chat_id)
-                file_sent = True
-            except telegram.error.TimedOut:
-                continue
+    with open('timeouts.txt', 'w') as timeouts:
+        for track in (await music_functions_async.client.users_playlists(playlist.kind, playlist.owner.uid)).tracks:
+            full_track = await track.fetch_track_async()
+            await music_functions_async.download(full_track, folder='downloads/')
+            await update.message.reply_text(f'{full_track["title"]} отправляется...')
+            file_sent = False
+            while not file_sent:
+                try:
+                    await context.bot.send_document(
+                            document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}', 'rb'), chat_id=update.message.chat_id,
+                            read_timeout=20, write_timeout=20, connect_timeout=20, pool_timeout=20)
+                    file_sent = True
+                    timeouts.write(f'[OK]{await music_functions_async.get_name_for_file(full_track)}\n')
+                except (telegram.error.TimedOut, asyncio.exceptions.TimeoutError, yandex_music.exceptions.TimedOutError):
+                    timeouts.write(f'[ERR]{await music_functions_async.get_name_for_file(full_track)} time-out\n')
+                    continue
+            # while not await context.bot.send_document(
+            #     document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}', 'rb'), chat_id=update.message.chat_id):
+            #     await context.bot.send_document(
+            #         document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}',
+            #             'rb'), chat_id=update.message.chat_id)
 
-        os.remove(f'downloads/{await music_functions_async.get_name_for_file(full_track)}')
+            os.remove(f'downloads/{await music_functions_async.get_name_for_file(full_track)}')
     # скачиваем плейлист
     return ConversationHandler.END
 

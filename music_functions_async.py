@@ -61,10 +61,3 @@ async def process_user_playlist_search(result):
     for i in range(len(playlists)):
         ans += f'{i + 1}: {await get_playlist_name(playlists[i])}\n'
     return ans
-
-
-
-# async def download_playlist(playlist):  # works
-#     for track in playlist.fetch_tracks_async():
-#         full_track = await track.fetch_track_async()
-#         await download(full_track)
