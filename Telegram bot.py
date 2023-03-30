@@ -16,10 +16,12 @@ from telegram import ReplyKeyboardMarkup, InputMediaPhoto, MenuButtonCommands, M
 
 import sqlite3
 # Запускаем логгирование
+from data import db_session
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
-
+db_session.global_init("db/database.db")
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +76,15 @@ async def download_playlist(update, context):
     with open('timeouts.txt', 'w') as timeouts:
         for track in (await music_functions_async.client.users_playlists(playlist.kind, playlist.owner.uid)).tracks:
             full_track = await track.fetch_track_async()
-            await music_functions_async.download(full_track, folder='downloads/')
+            got_file = False
+            while not got_file:
+                try:
+                    await music_functions_async.download(full_track,
+                                                         folder='downloads/')
+                    got_file = True
+                except (yandex_music.exceptions.TimedOutError, asyncio.exceptions.TimeoutError):
+                    continue
+            # await music_functions_async.download(full_track, folder='downloads/')
             await update.message.reply_text(f'{full_track["title"]} отправляется...')
             file_sent = False
             while not file_sent:
@@ -144,7 +154,15 @@ async def download_track(update, context):
         return ConversationHandler.END
     await update.message.reply_text('Скачиваем...', reply_markup=ReplyKeyboardRemove())
     full_track = context.chat_data['result'][context.chat_data['num'] - 1]
-    await music_functions_async.download(full_track, folder='downloads/')
+    got_file = False
+    while not got_file:
+        try:
+            await music_functions_async.download(full_track,
+                                                 folder='downloads/')
+            got_file = True
+        except (yandex_music.exceptions.TimedOutError, asyncio.exceptions.TimeoutError):
+            continue
+    # await music_functions_async.download(full_track, folder='downloads/')
     await update.message.reply_text(f'{await music_functions_async.get_track_name(full_track)} отправляется...')
     file_sent = False
     while not file_sent:
@@ -178,6 +196,23 @@ async def start_dialog_making_subscription(update, context):
     return 1
 
 
+async def start_dialog_fast_search_playlists(update, context):
+    """Обработчик первой стадии диалога быстрого поиска плейлистов"""
+    user_id = music_functions_async.get_user_yandex_login(update.message.chat_id)
+    if user_id is None:
+        await update.message.reply_text('Вы не зарегистрированы либо ввели неверный логин при регистрации, функция недоступна')
+    # print(user_id)
+    res = await music_functions_async.get_user_playlists(user_id)
+    ans = await music_functions_async.process_user_playlist_search(res)
+    await update.message.reply_text(ans)
+    await update.message.reply_text('Для скачивания плейлиста укажите его номер'
+                                    ' в данном списке, для выхода введите /stop')
+    context.chat_data['user_id'] = user_id
+    context.chat_data['playlists_amount'] = len(res)
+    context.chat_data['result'] = res
+    return 1
+
+
 async def adding_account(update, context):
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Сброшено', reply_markup=ReplyKeyboardRemove())
@@ -201,6 +236,22 @@ async def adding_account(update, context):
     return ConversationHandler.END
 
 
+async def register(update, context):
+    await update.message.reply_text("""Введите логин своего аккаунта Яндекс.Музыки""")
+    return 1
+
+
+async def get_user_login(update, context):
+    login = update.message.text.strip()
+    music_functions_async.save_login(update.message.chat_id, login)
+    return ConversationHandler.END
+
+
+async def get_my_info(update, context):
+    res = music_functions_async.get_user_yandex_login(update.message.chat_id)
+    await update.message.reply_text(f'Ваш логин Яндекс.Музыки: {res}')
+
+
 async def stop(update, context):
     """Обработчик выхода из диалога"""
     await update.message.reply_text("Всего доброго!")
@@ -215,13 +266,12 @@ async def help_info(update, context):
     /stop - используется для выхода из диалогов
     /search_user_playlists - начать диалог поиска плейлистов
     пользователя с возможностью их скачивания
-    /search_track - начать диалог поиска трека с 
-    возможностью скачивания трека
-    /random_track - бот отправит вам совершенно случайную 
-    песню (находится в разработке)
-    /subscription - оформить подписку, для получения 
-    уведомлений о выходах новых песен 
-    (бета_версия)""")
+    /search_track - начать диалог поиска трека с возможностью скачивания трека
+    /random_track - бот отправит вам совершенно случайную песню (находится в разработке)
+    /subscription - оформить подписку, для получения уведомлений о выходах новых песен (бета_версия)
+    /register - зарегистрироваться с логином Яндекс.Музыки
+    /playlists - получить список своих плейлистов (своими считаются плейлисты пользователя, логин которого введен при регистрации, для использования требуется зарегистрироваться)
+    /account_info - получить логин, указанный при регистрации""")
 
 
 def main():
@@ -237,6 +287,21 @@ def main():
     # application.add_handler(CommandHandler("help", help_command))
     # application.add_handler(CommandHandler("favourites", favourites_command))
     # application.add_handler(CommandHandler("search", search_command))
+    application.add_handler(CommandHandler('account_info', get_my_info))
+
+    registration_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('register', register)],
+        states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, get_user_login)]},
+        fallbacks=[CommandHandler('stop', stop)]
+    )
+    application.add_handler(registration_conv_handler)
+
+    fast_playlist_search_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('playlists', start_dialog_fast_search_playlists)],
+        states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, ask_for_playlist_download)],
+                3: [CommandHandler('stop', stop), MessageHandler(filters.ALL, download_playlist)]},
+        fallbacks=[CommandHandler('stop', stop)])
+    application.add_handler(fast_playlist_search_conv_handler)
 
     playlist_search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('search_user_playlists', start_dialog_search_playlists)],

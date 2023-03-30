@@ -1,4 +1,6 @@
 from yandex_music import ClientAsync
+from data.db_class import Db_class
+from data.db_session import *
 
 
 def authorize():
@@ -65,3 +67,20 @@ async def process_user_playlist_search(result):
     for i in range(len(playlists)):
         ans += f'{i + 1}: {await get_playlist_name(playlists[i])}\n'
     return ans
+
+
+def get_user_yandex_login(chat_id):
+    # cursor = sqlite3.connect('db/database.db').cursor()
+    # cursor.execute(f"""SELECT yandex_login FROM login_id_pairs WHERE telegram_chat_id""")
+    db_sess = create_session()
+    user_yandex_login = db_sess.query(Db_class).filter(Db_class.telegram_chat_id == chat_id).first().yandex_login
+    return user_yandex_login
+
+
+def save_login(chat_id, login):
+    db_sess = create_session()
+    data = Db_class()
+    data.telegram_chat_id = chat_id
+    data.yandex_login = login
+    db_sess.add(data)
+    db_sess.commit()
