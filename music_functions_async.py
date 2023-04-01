@@ -49,12 +49,12 @@ async def get_playlist_name(object):
 
 
 async def download(object, folder):  # works
-    """Скачивает данный обьект и возвращает путь к нему"""
+    """Скачивает данный обьект"""
     d = await object.download_async(folder + await get_name_for_file(object))
 
 
 async def get_user_playlists(user_id: str):
-    """Возвращает обьект результата поиска плейлистов по id пользователя"""
+    """Возвращает обьект результата поиска плейлистов по логину пользователя"""
     res = await client.users_playlists_list(user_id=user_id)
     return res
 
