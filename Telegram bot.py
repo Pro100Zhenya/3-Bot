@@ -17,12 +17,12 @@ from telegram import ReplyKeyboardMarkup, InputMediaPhoto, MenuButtonCommands, M
 import sqlite3
 
 # Запускаем логгирование
-# from data import db_session
+from data import db_session
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
-# db_session.global_init("db/database.db")
+db_session.global_init("db/database.db")
 logger = logging.getLogger(__name__)
 
 
