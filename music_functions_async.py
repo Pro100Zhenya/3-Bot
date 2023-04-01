@@ -1,6 +1,7 @@
 from yandex_music import ClientAsync
 from data.db_class import Db_class
 from data.db_session import *
+from random import randint
 
 
 def authorize():
@@ -28,7 +29,7 @@ async def process_search(result):
     if len(first_10_songs) == 0:
         return 'Ничего не найдено'
     for i in range(len(first_10_songs)):
-        answer += f'{i+1}: {(await get_track_name(first_10_songs[i]))}\n'
+        answer += f'{i + 1}: {(await get_track_name(first_10_songs[i]))}\n'
     return answer
 
 
@@ -60,13 +61,35 @@ async def get_user_playlists(user_id: str):
 
 async def process_user_playlist_search(result):
     """Обрабатывает результаты поиска плейлистов и приводит их в понятный пользователю вид"""
-    playlists = result  #['playlists']['results']
+    playlists = result  # ['playlists']['results']
     ans = ''
     if len(playlists) == 0:
         return 'Ничего не найдено'
     for i in range(len(playlists)):
         ans += f'{i + 1}: {await get_playlist_name(playlists[i])}\n'
     return ans
+
+
+async def search_random_track():
+    res = []
+    for _ in range(10):
+        flag = True
+        while flag:
+            check = (await client.tracks(track_ids=randint(30000, 1000000)))[0]
+            if check['available']:
+                res.append(check)
+                flag = False
+    return res
+
+
+async def process_search_random_track(tracks):
+    answer = ''
+    for i in range(len(tracks)):
+        if tracks[i]["albums"][0]["genre"]:
+            answer += f'{i + 1}: {(await get_track_name(tracks[i]))},  жанр - {tracks[i]["albums"][0]["genre"]}\n'
+        else:
+            answer += f'{i + 1}: {(await get_track_name(tracks[i]))}\n'
+    return answer
 
 
 def get_user_yandex_login(chat_id):

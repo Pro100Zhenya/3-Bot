@@ -15,13 +15,14 @@ from telegram import ReplyKeyboardMarkup, InputMediaPhoto, MenuButtonCommands, M
     InlineKeyboardButton, InlineKeyboardMarkup, MenuButton
 
 import sqlite3
+
 # Запускаем логгирование
-from data import db_session
+# from data import db_session
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
-db_session.global_init("db/database.db")
+# db_session.global_init("db/database.db")
 logger = logging.getLogger(__name__)
 
 
@@ -135,10 +136,10 @@ async def ask_for_track_download(update, context):
         # print(num, 'введено')
     except ValueError:
         await update.message.reply_text('Введен неверный номер, попробуйте снова')
-        return 1
+        return 2
     if num > 10:
         await update.message.reply_text('Введен слишком большой номер, попробуйте снова')
-        return 1
+        return 2
     await update.message.reply_text(f'Вы точно хотите скачать трек\n '
                                     f'{await music_functions_async.get_track_name(context.chat_data["result"][num - 1])}?\n'
                                     f'Введите да, если хотите скачать трек, и любой другой ответ в ином случае',
@@ -154,6 +155,7 @@ async def download_track(update, context):
         return ConversationHandler.END
     await update.message.reply_text('Скачиваем...', reply_markup=ReplyKeyboardRemove())
     full_track = context.chat_data['result'][context.chat_data['num'] - 1]
+    # print(full_track['albums'][0]['genre'])
     got_file = False
     while not got_file:
         try:
@@ -183,7 +185,7 @@ async def start_dialog_making_subscription(update, context):
     """Обработчик первой стадии оформление подписки, начинает диалог"""
     con = sqlite3.connect("Bot_database.db")
     cur = con.cursor()
-    result = list(map(lambda x:x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
+    result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
     con.close()
     if update.message.chat_id in result:
         await update.message.reply_text(
@@ -200,7 +202,8 @@ async def start_dialog_fast_search_playlists(update, context):
     """Обработчик первой стадии диалога быстрого поиска плейлистов"""
     user_id = music_functions_async.get_user_yandex_login(update.message.chat_id)
     if user_id is None:
-        await update.message.reply_text('Вы не зарегистрированы либо ввели неверный логин при регистрации, функция недоступна')
+        await update.message.reply_text(
+            'Вы не зарегистрированы либо ввели неверный логин при регистрации, функция недоступна')
     # print(user_id)
     res = await music_functions_async.get_user_playlists(user_id)
     ans = await music_functions_async.process_user_playlist_search(res)
@@ -219,7 +222,7 @@ async def adding_account(update, context):
         return ConversationHandler.END
     con = sqlite3.connect("Bot_database.db")
     cur = con.cursor()
-    result = list(map(lambda x:x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
+    result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
     if update.message.chat_id in result:
         result = cur.execute(f"""DELETE from subscription
                             where chat_id = {update.message.chat_id}""").fetchall()
@@ -258,6 +261,15 @@ async def stop(update, context):
     return ConversationHandler.END
 
 
+async def start_dialog_search_random_track(update, context):
+    receiving = await music_functions_async.search_random_track()
+    answer = await music_functions_async.process_search_random_track(receiving)
+    await update.message.reply_text(answer)
+    await update.message.reply_text('Для скачивания трека введите его номер в этом списке, для отмены введите /stop')
+    context.chat_data['result'] = receiving
+    return 2
+
+
 async def help_info(update, context):
     # telegram.Bot.sendMessage(1850220173, 'ds')
     # print(update.effective_message.chat_id)
@@ -267,7 +279,7 @@ async def help_info(update, context):
     /search_user_playlists - начать диалог поиска плейлистов
     пользователя с возможностью их скачивания
     /search_track - начать диалог поиска трека с возможностью скачивания трека
-    /random_track - бот отправит вам совершенно случайную песню (находится в разработке)
+    /random_track - бот отправит вам совершенно случайную подборку песен
     /subscription - оформить подписку, для получения уведомлений о выходах новых песен (бета_версия)
     /register - зарегистрироваться с логином Яндекс.Музыки
     /playlists - получить список своих плейлистов (своими считаются плейлисты пользователя, логин которого введен при регистрации, для использования требуется зарегистрироваться)
@@ -327,6 +339,16 @@ def main():
     )
     application.add_handler(making_subscription)
 
+    search_random_track = ConversationHandler(
+        entry_points=[CommandHandler('random_track', start_dialog_search_random_track)],
+        states={
+            2: [CommandHandler('stop', stop), MessageHandler(filters.ALL, ask_for_track_download)],
+            3: [CommandHandler('stop', stop), MessageHandler(filters.ALL, download_track)]
+        },
+        fallbacks=[CommandHandler('stop', stop)]
+    )
+    application.add_handler(search_random_track)
+
     application.add_handler(CommandHandler('help', help_info))
     # Запускаем приложение.
     application.run_polling()
@@ -338,13 +360,8 @@ async def start(update, context):
     )
 
 
-async def mailing(chat_id, context):
-    await context.bot.send_message(chat_id, 'КУКУ! 5c. прошли!')
-
-
 reply_keyboard_search = [['Да', 'Нет']]
 markup_search = ReplyKeyboardMarkup(reply_keyboard_search, one_time_keyboard=False, resize_keyboard=True)
-# asyncio.run(mailing(1850220173,'jjk'))
 
 # Запускаем функцию main() в случае запуска скрипта.
 if __name__ == '__main__':
