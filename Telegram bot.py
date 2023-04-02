@@ -36,7 +36,6 @@ async def start_dialog_search_playlists(update, context):
 async def search_users_playlists(update, context):
     """Обработчик второй стадии диалога поиска плейлистов, выполняет поиск по id"""
     user_id = update.message.text
-    # print(user_id)
     res = await music_functions_async.get_user_playlists(user_id)
     ans = await music_functions_async.process_user_playlist_search(res)
     await update.message.reply_text(ans)
@@ -52,7 +51,6 @@ async def ask_for_playlist_download(update, context):
     """Обработчик третий стадии диалога поиска плейлистов, получение номера требуемого плейлиста"""
     try:
         num = int(update.message.text)
-        # print(num, 'введено')
     except ValueError:
         await update.message.reply_text('Введен неверный номер, попробуйте снова')
         return 1
@@ -85,7 +83,6 @@ async def download_playlist(update, context):
                     got_file = True
                 except (yandex_music.exceptions.TimedOutError, asyncio.exceptions.TimeoutError):
                     continue
-            # await music_functions_async.download(full_track, folder='downloads/')
             await update.message.reply_text(f'{full_track["title"]} отправляется...')
             file_sent = False
             while not file_sent:
@@ -101,13 +98,9 @@ async def download_playlist(update, context):
                         yandex_music.exceptions.TimedOutError):
                     timeouts.write(f'[ERR]{await music_functions_async.get_name_for_file(full_track)} time-out\n')
                     continue
-            # while not await context.bot.send_document(
-            #     document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}', 'rb'), chat_id=update.message.chat_id):
-            #     await context.bot.send_document(
-            #         document=open(f'downloads/{await music_functions_async.get_name_for_file(full_track)}',
-            #             'rb'), chat_id=update.message.chat_id)
 
             os.remove(f'downloads/{await music_functions_async.get_name_for_file(full_track)}')
+
     # скачиваем плейлист
     return ConversationHandler.END
 
@@ -133,7 +126,6 @@ async def ask_for_track_download(update, context):
     """Обработчик второй стадии поиска треков, отвечает за получение номера скачиваемого трека"""
     try:
         num = int(update.message.text)
-        # print(num, 'введено')
     except ValueError:
         await update.message.reply_text('Введен неверный номер, попробуйте снова')
         return 2
@@ -155,7 +147,6 @@ async def download_track(update, context):
         return ConversationHandler.END
     await update.message.reply_text('Скачиваем...', reply_markup=ReplyKeyboardRemove())
     full_track = context.chat_data['result'][context.chat_data['num'] - 1]
-    # print(full_track['albums'][0]['genre'])
     got_file = False
     while not got_file:
         try:
@@ -183,7 +174,7 @@ async def download_track(update, context):
 
 async def start_dialog_making_subscription(update, context):
     """Обработчик первой стадии оформление подписки, начинает диалог"""
-    con = sqlite3.connect("Bot_database.db")
+    con = sqlite3.connect("db/database.db")
     cur = con.cursor()
     result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
     con.close()
@@ -204,7 +195,6 @@ async def start_dialog_fast_search_playlists(update, context):
     if user_id is None:
         await update.message.reply_text(
             'Вы не зарегистрированы либо ввели неверный логин при регистрации, функция недоступна')
-    # print(user_id)
     res = await music_functions_async.get_user_playlists(user_id)
     ans = await music_functions_async.process_user_playlist_search(res)
     await update.message.reply_text(ans)
@@ -217,10 +207,11 @@ async def start_dialog_fast_search_playlists(update, context):
 
 
 async def adding_account(update, context):
+    """Обработчик второй стадии диалога, отменяет или оформляет подписку"""
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Сброшено', reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
-    con = sqlite3.connect("Bot_database.db")
+    con = sqlite3.connect("db/database.db")
     cur = con.cursor()
     result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
     if update.message.chat_id in result:
@@ -262,6 +253,8 @@ async def stop(update, context):
 
 
 async def start_dialog_search_random_track(update, context):
+    """Начинает диалог поиска случайных треков"""
+    await update.message.reply_text('Происходит поиск треков, это может занять пару секунд...')
     receiving = await music_functions_async.search_random_track()
     answer = await music_functions_async.process_search_random_track(receiving)
     await update.message.reply_text(answer)
@@ -271,8 +264,6 @@ async def start_dialog_search_random_track(update, context):
 
 
 async def help_info(update, context):
-    # telegram.Bot.sendMessage(1850220173, 'ds')
-    # print(update.effective_message.chat_id)
     await update.message.reply_text("""Как использовать данного бота:
     /help - подсказки по командам
     /stop - используется для выхода из диалогов
@@ -288,19 +279,11 @@ async def help_info(update, context):
 
 def main():
     # Создаём объект Application.
-    # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # text_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, echo)
-
-    # Регистрируем обработчик в приложении.
-    # application.add_handler(text_handler)
-    # application.add_handler(CommandHandler("start", start))
-    # application.add_handler(CommandHandler("help", help_command))
-    # application.add_handler(CommandHandler("favourites", favourites_command))
-    # application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler('account_info', get_my_info))
 
+    # диалог регистрации аккаунта в яндекс музыке
     registration_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('register', register)],
         states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, get_user_login)]},
@@ -308,6 +291,7 @@ def main():
     )
     application.add_handler(registration_conv_handler)
 
+    # диалог быстрого поиска плейлиста
     fast_playlist_search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('playlists', start_dialog_fast_search_playlists)],
         states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, ask_for_playlist_download)],
@@ -315,6 +299,7 @@ def main():
         fallbacks=[CommandHandler('stop', stop)])
     application.add_handler(fast_playlist_search_conv_handler)
 
+    # диалог поиска плейлистов
     playlist_search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('search_user_playlists', start_dialog_search_playlists)],
         states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, search_users_playlists)],
@@ -323,6 +308,7 @@ def main():
         fallbacks=[CommandHandler('stop', stop)])
     application.add_handler(playlist_search_conv_handler)
 
+    # диалог поиска треков
     track_search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('search_track', start_dialog_search_track)],
         states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, search_track)],
@@ -332,6 +318,7 @@ def main():
     )
     application.add_handler(track_search_conv_handler)
 
+    # диалог оформления подписки
     making_subscription = ConversationHandler(
         entry_points=[CommandHandler('subscription', start_dialog_making_subscription)],
         states={1: [CommandHandler('stop', stop), MessageHandler(filters.ALL, adding_account)]},
@@ -339,6 +326,7 @@ def main():
     )
     application.add_handler(making_subscription)
 
+    # диалог поиска случайных треков
     search_random_track = ConversationHandler(
         entry_points=[CommandHandler('random_track', start_dialog_search_random_track)],
         states={

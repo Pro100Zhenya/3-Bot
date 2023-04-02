@@ -1,3 +1,5 @@
+import asyncio
+
 from yandex_music import ClientAsync
 from data.db_class import Db_class
 from data.db_session import *
@@ -49,12 +51,12 @@ async def get_playlist_name(object):
 
 
 async def download(object, folder):  # works
-    """Скачивает данный обьект"""
+    """Скачивает данный обьект и возвращает путь к нему"""
     d = await object.download_async(folder + await get_name_for_file(object))
 
 
 async def get_user_playlists(user_id: str):
-    """Возвращает обьект результата поиска плейлистов по логину пользователя"""
+    """Возвращает обьект результата поиска плейлистов по id пользователя"""
     res = await client.users_playlists_list(user_id=user_id)
     return res
 
@@ -71,6 +73,7 @@ async def process_user_playlist_search(result):
 
 
 async def search_random_track():
+    """Возвращает массив с информацией о 10 песнях, которые были выбраны случайно"""
     res = []
     for _ in range(10):
         flag = True
@@ -83,6 +86,7 @@ async def search_random_track():
 
 
 async def process_search_random_track(tracks):
+    """Обрабатывает результаты поиска случайных песен и приводит их в понятный пользователю вид"""
     answer = ''
     for i in range(len(tracks)):
         if tracks[i]["albums"][0]["genre"]:
@@ -107,3 +111,23 @@ def save_login(chat_id, login):
     data.yandex_login = login
     db_sess.add(data)
     db_sess.commit()
+
+
+async def search_new_track_chart() -> list:
+    """search new track in chart"""
+    chart = await client.chart()
+    answer = []
+    for chart_track in chart['chart']['tracks']:
+        if chart_track['chart']['progress'] == 'new' and chart_track['track']['available']:
+            # ['chart']['progress'] == 'new', f"2023-03-{j}" in chart_track['timestamp']:
+            answer.append(chart_track)
+    return answer
+    # new_releases = (await client.new_releases())['new_releases']
+    # print(new_releases)
+    # for track_id in new_releases:
+    #     print(track_id)
+    #     check = (await client.tracks(track_ids=track_id))[0]
+    #     print(check)
+    # print(new_releases)
+
+
