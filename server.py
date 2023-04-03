@@ -1,5 +1,6 @@
 # Импортируем необходимые классы.
 import asyncio.exceptions
+from concurrents.futures import TimeoutError
 import logging
 import os
 
@@ -83,7 +84,7 @@ async def download_playlist(update, context):
                     await music_functions_async.download(full_track,
                                                          folder='downloads/')
                     got_file = True
-                except (yandex_music.exceptions.TimedOutError, asyncio.exceptions.TimeoutError):
+                except (yandex_music.exceptions.TimedOutError, TimeoutError):
                     continue
             await update.message.reply_text(f'{full_track["title"]} отправляется...')
             file_sent = False
@@ -96,7 +97,7 @@ async def download_playlist(update, context):
                     file_sent = True
                     timeouts.write(f'[OK]{await music_functions_async.get_name_for_file(full_track)}\n')
                 except (
-                        telegram.error.TimedOut, asyncio.exceptions.TimeoutError,
+                        telegram.error.TimedOut, TimeoutError,
                         yandex_music.exceptions.TimedOutError):
                     timeouts.write(f'[ERR]{await music_functions_async.get_name_for_file(full_track)} time-out\n')
                     continue
@@ -160,7 +161,7 @@ async def download_track(update, context):
             await music_functions_async.download(full_track,
                                                  folder='downloads/')
             got_file = True
-        except (yandex_music.exceptions.TimedOutError, asyncio.exceptions.TimeoutError):
+        except (yandex_music.exceptions.TimedOutError, TimeoutError):
             continue
     # await music_functions_async.download(full_track, folder='downloads/')
     await update.message.reply_text(f'{await music_functions_async.get_track_name(full_track)} отправляется...')
