@@ -2,6 +2,7 @@ import asyncio
 
 from yandex_music import ClientAsync
 from data.db_class import Db_class
+from data.Users_subscription import Users_subscription
 from data.db_session import *
 from random import randint
 
@@ -26,13 +27,13 @@ async def search(search_string: str, type_: str = 'all'):
 
 async def process_search(result):
     """Обрабатывает результат запроса поиска треков и приводит их в понятный пользователю вид"""
-    first_10_songs = result['tracks']['results'][:10]
-    answer = ''
-    if len(first_10_songs) == 0:
-        return 'Ничего не найдено'
-    for i in range(len(first_10_songs)):
-        answer += f'{i + 1}: {(await get_track_name(first_10_songs[i]))}\n'
-    return answer
+    if result['tracks']:
+        first_10_songs = result['tracks']['results'][:10]
+        answer = ''
+        for i in range(len(first_10_songs)):
+            answer += f'{i + 1}: {(await get_track_name(first_10_songs[i]))}\n'
+        return answer
+    return 'Ничего не найдено'
 
 
 async def get_name_for_file(object):  # works
@@ -100,16 +101,38 @@ def get_user_yandex_login(chat_id):
     # cursor = sqlite3.connect('db/database.db').cursor()
     # cursor.execute(f"""SELECT yandex_login FROM login_id_pairs WHERE telegram_chat_id""")
     db_sess = create_session()
-    user_yandex_login = db_sess.query(Db_class).filter(Db_class.telegram_chat_id == chat_id).first().yandex_login
-    return user_yandex_login
+    if db_sess.query(Db_class).filter(Db_class.telegram_chat_id == chat_id).first():
+        user_yandex_login = db_sess.query(Db_class).filter(Db_class.telegram_chat_id == chat_id).first().yandex_login
+        return user_yandex_login
 
 
-def save_login(chat_id, login):
+def save_yandex_login(chat_id, login):
     db_sess = create_session()
     data = Db_class()
     data.telegram_chat_id = chat_id
     data.yandex_login = login
     db_sess.add(data)
+    db_sess.commit()
+
+
+def save_subscription(chat_id, login):
+    db_sess = create_session()
+    data = Users_subscription()
+    data.chat_id = chat_id
+    data.user = login
+    db_sess.add(data)
+    db_sess.commit()
+
+
+def get_id_subscription():
+    db_sess = create_session()
+    login_subscription = [user_id.chat_id for user_id in db_sess.query(Users_subscription).all()]
+    return login_subscription
+
+
+def delete_subscription(chat_id):
+    db_sess = create_session()
+    db_sess.query(Users_subscription).filter(Users_subscription.chat_id == chat_id).delete()
     db_sess.commit()
 
 
@@ -119,15 +142,10 @@ async def search_new_track_chart() -> list:
     answer = []
     for chart_track in chart['chart']['tracks']:
         if chart_track['chart']['progress'] == 'new' and chart_track['track']['available']:
-            # ['chart']['progress'] == 'new', f"2023-03-{j}" in chart_track['timestamp']:
+            answer.append(chart_track)
+    if answer:
+        return answer
+    for chart_track in chart['chart']['tracks']:
+        if chart_track['chart']['shift'] >= 4 and chart_track['track']['available']:
             answer.append(chart_track)
     return answer
-    # new_releases = (await client.new_releases())['new_releases']
-    # print(new_releases)
-    # for track_id in new_releases:
-    #     print(track_id)
-    #     check = (await client.tracks(track_ids=track_id))[0]
-    #     print(check)
-    # print(new_releases)
-
-

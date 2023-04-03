@@ -14,22 +14,21 @@ from telegram import ReplyKeyboardMarkup, InputMediaPhoto, MenuButtonCommands, M
     MenuButtonWebApp, \
     InlineKeyboardButton, InlineKeyboardMarkup, MenuButton
 
-import sqlite3
-
-# Запускаем логгирование
 from data import db_session
 
+db_session.global_init("db/database.db")
+
+# Запускаем логгирование
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
-db_session.global_init("db/database.db")
 logger = logging.getLogger(__name__)
 
 
 # Эта строка отсылает сообщение
 async def start_dialog_search_playlists(update, context):
     """Обработчик первой стадии диалога поиска плейлистов, начало диалога"""
-    await update.message.reply_text('Укажите логин пользователя, для выхода введите /stop')
+    await update.message.reply_text('Укажите логин пользователя. Для выхода из диалога введите /stop')
     return 1
 
 
@@ -39,8 +38,11 @@ async def search_users_playlists(update, context):
     res = await music_functions_async.get_user_playlists(user_id)
     ans = await music_functions_async.process_user_playlist_search(res)
     await update.message.reply_text(ans)
+    if ans == 'Ничего не найдено':
+        await update.message.reply_text('Убедитесь в корректности введенных данных и попробуйте снова')
+        return ConversationHandler.END
     await update.message.reply_text('Для скачивания плейлиста укажите его номер'
-                                    ' в данном списке, для выхода введите /stop')
+                                    ' в данном списке. Для выхода из диалога введите /stop')
     context.chat_data['user_id'] = user_id
     context.chat_data['playlists_amount'] = len(res)
     context.chat_data['result'] = res
@@ -107,23 +109,28 @@ async def download_playlist(update, context):
 
 async def start_dialog_search_track(update, context):
     """Обработчик первой стадии диалога поиска треков, начинает диалог"""
-    await update.message.reply_text('Введите название трека, для отмены введите /stop')
+    await update.message.reply_text(
+        'Введите запрос (в качестве запроса может быть: название трека, его автор или текст из этой песни). Для выхода из диалога введите /stop')
     return 1
 
 
 async def search_track(update, context):
-    """Обработчик первой стадии диалога поиска треков, поиск трека"""
+    """Обработчик второй стадии диалога поиска треков, поиск трека"""
     search_string = update.message.text.strip()  # 12 - длина команды
     search_result = await music_functions_async.search(search_string)
     answer = await music_functions_async.process_search(search_result)
     await update.message.reply_text(answer)
-    await update.message.reply_text('Для скачивания трека введите его номер в этом списке, для отмены введите /stop')
+    if answer == 'Ничего не найдено':
+        await update.message.reply_text('Убедитесь в корректности введенных данных и попробуйте снова')
+        return ConversationHandler.END
+    await update.message.reply_text(
+        'Для скачивания трека введите его номер в этом списке. Для выхода из диалога введите /stop')
     context.chat_data['result'] = search_result['tracks']['results']
     return 2
 
 
 async def ask_for_track_download(update, context):
-    """Обработчик второй стадии поиска треков, отвечает за получение номера скачиваемого трека"""
+    """Обработчик третьей стадии поиска треков, отвечает за получение номера скачиваемого трека"""
     try:
         num = int(update.message.text)
     except ValueError:
@@ -141,7 +148,7 @@ async def ask_for_track_download(update, context):
 
 
 async def download_track(update, context):
-    """Обработчик третьей стадии диалога поиска треков, скачивание трека"""
+    """Обработчик четвертой стадии диалога поиска треков, скачивание трека"""
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Скачивание отменено', reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
@@ -174,17 +181,16 @@ async def download_track(update, context):
 
 async def start_dialog_making_subscription(update, context):
     """Обработчик первой стадии оформление подписки, начинает диалог"""
-    con = sqlite3.connect("db/database.db")
-    cur = con.cursor()
-    result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
-    con.close()
+    result = music_functions_async.get_id_subscription()
     if update.message.chat_id in result:
         await update.message.reply_text(
-            'Вы уже подписаны. Введите "да", если хотите отменить подписку, и "нет" в противном случае, для отмены введите /stop',
+            'Вы уже подписаны. Введите "да", если хотите отменить подписку, и "нет" в противном случае. Для выхода из диалога введите /stop',
             reply_markup=markup_search)
     else:
         await update.message.reply_text(
-            'Введите "да", если хотите оформить подписки, и "нет" в противном случае, для отмены введите /stop',
+            'Введите "да", если хотите оформить подписки, и "нет" в противном случае. Оформив подписку, вы будете'
+            ' ежедневно получать основные изменения в чарте, в дальнейшем, если вы захотите отменить подписку,'
+            ' воспользуйтесь этой функцией снова. Для выхода из диалога введите /stop',
             reply_markup=markup_search)
     return 1
 
@@ -194,12 +200,12 @@ async def start_dialog_fast_search_playlists(update, context):
     user_id = music_functions_async.get_user_yandex_login(update.message.chat_id)
     if user_id is None:
         await update.message.reply_text(
-            'Вы не зарегистрированы либо ввели неверный логин при регистрации, функция недоступна')
+            'Вы не зарегистрированы, либо ввели неверный логин при регистрации. Функция недоступна')
     res = await music_functions_async.get_user_playlists(user_id)
     ans = await music_functions_async.process_user_playlist_search(res)
     await update.message.reply_text(ans)
     await update.message.reply_text('Для скачивания плейлиста укажите его номер'
-                                    ' в данном списке, для выхода введите /stop')
+                                    ' в данном списке. Для выхода из диалога введите /stop')
     context.chat_data['user_id'] = user_id
     context.chat_data['playlists_amount'] = len(res)
     context.chat_data['result'] = res
@@ -211,39 +217,36 @@ async def adding_account(update, context):
     if update.message.text.lower() != 'да':
         await update.message.reply_text('Сброшено', reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
-    con = sqlite3.connect("db/database.db")
-    cur = con.cursor()
-    result = list(map(lambda x: x[0], cur.execute(f"""SELECT chat_id FROM subscription""").fetchall()))
+    result = music_functions_async.get_id_subscription()
     if update.message.chat_id in result:
-        result = cur.execute(f"""DELETE from subscription
-                            where chat_id = {update.message.chat_id}""").fetchall()
-        con.commit()
-        con.close()
+        music_functions_async.delete_subscription(update.message.chat_id)
         await update.message.reply_text('подписка успешно отменена',
                                         reply_markup=ReplyKeyboardRemove())
     else:
-        result = cur.execute(f"""INSERT INTO subscription(chat_id) VALUES({update.message.chat_id})""").fetchall()
-        con.commit()
-        con.close()
+        music_functions_async.save_subscription(update.message.chat_id, update.message.chat.username)
         await update.message.reply_text('подписка успешно оформлена',
                                         reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 
 async def register(update, context):
-    await update.message.reply_text("""Введите логин своего аккаунта Яндекс.Музыки""")
+    await update.message.reply_text(
+        """Введите логин своего аккаунта Яндекс.Музыки. Для выхода из диалога введите /stop'""")
     return 1
 
 
 async def get_user_login(update, context):
     login = update.message.text.strip()
-    music_functions_async.save_login(update.message.chat_id, login)
+    music_functions_async.save_yandex_login(update.message.chat_id, login)
     return ConversationHandler.END
 
 
 async def get_my_info(update, context):
     res = music_functions_async.get_user_yandex_login(update.message.chat_id)
-    await update.message.reply_text(f'Ваш логин Яндекс.Музыки: {res}')
+    if res:
+        await update.message.reply_text(f'Ваш логин Яндекс.Музыки: {res}')
+    else:
+        await update.message.reply_text("Вы еще не зарегистрировались")
 
 
 async def stop(update, context):
@@ -258,30 +261,43 @@ async def start_dialog_search_random_track(update, context):
     receiving = await music_functions_async.search_random_track()
     answer = await music_functions_async.process_search_random_track(receiving)
     await update.message.reply_text(answer)
-    await update.message.reply_text('Для скачивания трека введите его номер в этом списке, для отмены введите /stop')
+    await update.message.reply_text(
+        'Для скачивания трека введите его номер в этом списке. Для выхода из диалога введите /stop')
     context.chat_data['result'] = receiving
     return 2
 
 
 async def help_info(update, context):
     await update.message.reply_text("""Как использовать данного бота:
-    /help - подсказки по командам
-    /stop - используется для выхода из диалогов
-    /search_user_playlists - начать диалог поиска плейлистов
-    пользователя с возможностью их скачивания
-    /search_track - начать диалог поиска трека с возможностью скачивания трека
-    /random_track - бот отправит вам совершенно случайную подборку песен
-    /subscription - оформить подписку, для получения уведомлений о выходах новых песен (бета_версия)
-    /register - зарегистрироваться с логином Яндекс.Музыки
-    /playlists - получить список своих плейлистов (своими считаются плейлисты пользователя, логин которого введен при регистрации, для использования требуется зарегистрироваться)
-    /account_info - получить логин, указанный при регистрации""")
+/help - подсказки по командам
+···
+/stop - используется для выхода из диалогов
+···
+/search_user_playlists - начать диалог поиска плейлистов пользователя, с возможностью их скачивания
+···
+/search_track - начать диалог поиска трека, с возможностью его скачивания 
+···
+/random_track - бот отправит вам совершенно случайную подборку треков
+···
+/subscription - для оформления и отказа от подписки (вся информация при начале диалога)
+···
+/register - зарегистрироваться с логином Яндекс.Музыки
+···
+/playlists - получить список своих плейлистов (своими считаются плейлисты пользователя, логин которого введен при регистрации, для использования требуется зарегистрироваться)
+···
+/account_info - получить логин, указанный при регистрации""")
+
+
+async def start(update, context):
+    await update.message.reply_text(
+        f"Приветсвую тебя {update.message.chat.first_name}. Я музыкальный бот, который работает с Яндекс.Музыкой. Для "
+        f"приятной работы со мной, советую воспользоваться функцией /help"
+    )
 
 
 def main():
     # Создаём объект Application.
     application = Application.builder().token(BOT_TOKEN).build()
-
-    application.add_handler(CommandHandler('account_info', get_my_info))
 
     # диалог регистрации аккаунта в яндекс музыке
     registration_conv_handler = ConversationHandler(
@@ -338,14 +354,11 @@ def main():
     application.add_handler(search_random_track)
 
     application.add_handler(CommandHandler('help', help_info))
+    application.add_handler(CommandHandler('account_info', get_my_info))
+    application.add_handler(CommandHandler('start', start))
+
     # Запускаем приложение.
     application.run_polling()
-
-
-async def start(update, context):
-    await update.message.reply_text(
-        "Я бот-справочник. Какая информация вам нужна?",
-    )
 
 
 reply_keyboard_search = [['Да', 'Нет']]
