@@ -1,6 +1,6 @@
 # Импортируем необходимые классы.
-import asyncio.exceptions
-from concurrents.futures import TimeoutError
+# import asyncio.exceptions
+from concurrent.futures import TimeoutError
 import logging
 import os
 
