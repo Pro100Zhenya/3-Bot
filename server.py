@@ -86,7 +86,7 @@ async def download_playlist(update, context):
                     got_file = True
                 except (yandex_music.exceptions.TimedOutError, TimeoutError):
                     continue
-            await update.message.reply_text(f'{full_track["title"]} отправляется...')
+            await update.message.reply_text(f'{await music_functions_async.get_track_name(full_track)} отправляется...')
             file_sent = False
             while not file_sent:
                 try:
@@ -95,11 +95,11 @@ async def download_playlist(update, context):
                         chat_id=update.message.chat_id,
                         read_timeout=20, write_timeout=20, connect_timeout=20, pool_timeout=20)
                     file_sent = True
-                    timeouts.write(f'[OK]{await music_functions_async.get_name_for_file(full_track)}\n')
+                    # timeouts.write(f'[OK]{await music_functions_async.get_name_for_file(full_track)}\n')
                 except (
                         telegram.error.TimedOut, TimeoutError,
                         yandex_music.exceptions.TimedOutError):
-                    timeouts.write(f'[ERR]{await music_functions_async.get_name_for_file(full_track)} time-out\n')
+                    # timeouts.write(f'[ERR]{await music_functions_async.get_name_for_file(full_track)} time-out\n')
                     continue
 
             os.remove(f'downloads/{await music_functions_async.get_name_for_file(full_track)}')
