@@ -1,5 +1,6 @@
 import asyncio
 
+import yandex_music.exceptions
 from yandex_music import ClientAsync
 from data.db_class import Db_class
 from data.Users_subscription import Users_subscription
@@ -58,7 +59,10 @@ async def download(object, folder):  # works
 
 async def get_user_playlists(user_id: str):
     """Возвращает обьект результата поиска плейлистов по id пользователя"""
-    res = await client.users_playlists_list(user_id=user_id)
+    try:
+        res = await client.users_playlists_list(user_id=user_id)
+    except yandex_music.exceptions.UnauthorizedError:
+        return None
     return res
 
 
@@ -66,7 +70,7 @@ async def process_user_playlist_search(result):
     """Обрабатывает результаты поиска плейлистов и приводит их в понятный пользователю вид"""
     playlists = result  # ['playlists']['results']
     ans = ''
-    if len(playlists) == 0:
+    if playlists is None:
         return 'Ничего не найдено'
     for i in range(len(playlists)):
         ans += f'{i + 1}: {await get_playlist_name(playlists[i])}\n'
